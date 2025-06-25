@@ -1,6 +1,7 @@
 const UserSchema = require("../models/User");
 const bcrypt = require("bcrypt");
 const generateToken = require("../utils/generateToken");
+const cloudinary = require("../config/cloudinary");
 class AuthController {
   async register(req, res) {
     try {
@@ -115,6 +116,55 @@ class AuthController {
       res.status(500).json({
         message: "Internal Server Error.",
       });
+    }
+  }
+
+  async updateProfile(req, res) {
+    try {
+      const { avatar, description, phone, dateOfBirth, gender, address } =
+        req.body;
+
+      if (
+        !avatar &&
+        !description &&
+        !phone &&
+        !dateOfBirth &&
+        !gender &&
+        !address
+      ) {
+        return res.status(400).json({
+          message: "No fields have been updated.",
+        });
+      }
+
+      let avatarUrl;
+
+      if (avatar) {
+        const cloudinaryRes = await cloudinary.uploader.upload(avatar);
+        avatarUrl = cloudinaryRes.secure_url;
+      } else {
+        avatarUrl = req.user.avatar;
+      }
+
+      const updateFields = {
+        avatar: avatarUrl,
+        description: description || req.user.description,
+        phone: phone || req.user.phone,
+        dateOfBirth: dateOfBirth || req.user.dateOfBirth,
+        gender: gender || req.user.gender,
+        address: address || req.user.address,
+      };
+
+      const updatedUser = await UserSchema.findByIdAndUpdate(
+        req.user._id,
+        updateFields,
+        { new: true }
+      ).select("-password");
+
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      console.log("Error in updateProfile:", error.message);
+      res.status(500).json({ message: "Internal Server Error." });
     }
   }
 }

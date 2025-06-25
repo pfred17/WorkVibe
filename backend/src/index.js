@@ -16,6 +16,8 @@ const app = express();
 app.use(cors());
 app.use(express.json()); // để parse body JSON
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+
 // Cấu hình cổng
 const PORT = process.env.PORT || 5001;
 

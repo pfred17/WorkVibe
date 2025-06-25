@@ -4,6 +4,7 @@ const {
   register,
   logout,
   checkAuth,
+  updateProfile,
 } = require("../controllers/authController");
 const { protectRoute } = require("../middlewares/authMiddileware");
 const router = express.Router();
@@ -19,5 +20,8 @@ router.post("/logout", logout);
 
 // [GET] /api/auth/check
 router.get("/check", protectRoute, checkAuth);
+
+// [PUT] /api/auth/update-profile
+router.put("/update-profile", protectRoute, updateProfile);
 
 module.exports = router;
