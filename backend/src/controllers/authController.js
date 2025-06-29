@@ -1,7 +1,8 @@
-const UserSchema = require("../models/User");
+const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const generateToken = require("../utils/generateToken");
 const cloudinary = require("../config/cloudinary");
+
 class AuthController {
   async register(req, res) {
     try {
@@ -19,7 +20,7 @@ class AuthController {
         });
       }
 
-      const user = await UserSchema.findOne({ email });
+      const user = await User.findOne({ email });
 
       if (user) {
         return res.status(400).json({
@@ -30,7 +31,7 @@ class AuthController {
       const salt = await bcrypt.genSalt(10);
       const hassedPassword = await bcrypt.hash(password, salt);
 
-      const newUser = new UserSchema({
+      const newUser = new User({
         name,
         email,
         password: hassedPassword,
@@ -62,7 +63,7 @@ class AuthController {
     const { email, password } = req.body;
 
     try {
-      const user = await UserSchema.findOne({ email });
+      const user = await User.findOne({ email });
 
       if (!user) {
         return res.status(400).json({
@@ -155,7 +156,7 @@ class AuthController {
         address: address || req.user.address,
       };
 
-      const updatedUser = await UserSchema.findByIdAndUpdate(
+      const updatedUser = await User.findByIdAndUpdate(
         req.user._id,
         updateFields,
         { new: true }

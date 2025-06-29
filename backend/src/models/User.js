@@ -19,6 +19,7 @@ const UserSchema = new mongoose.Schema(
     resumeUrl: String, // Link CV người tìm việc (nếu có)
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company" }, // nếu là employer
+    status: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
