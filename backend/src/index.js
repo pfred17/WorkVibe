@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const route = require("./routes/index");
 const connectDB = require("./config/db");
+const errorHandler = require("./middlewares/errorMiddleware");
 // Load biến môi trường từ file .env
 dotenv.config();
 
@@ -18,16 +19,19 @@ app.use(express.json()); // để parse body JSON
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
+// Cấu hình route
+route(app);
+
+// Error handler
+app.use(errorHandler);
+
 // Cấu hình cổng
 const PORT = process.env.PORT || 5001;
 
 // Kết nối MongoDB
-
-// Cấu hình route
-route(app);
+connectDB();
 
 // Khởi chạy server
 app.listen(PORT, () => {
-  console.log(`🚀 Server đang chạy tại http://localhost:${PORT}`);
-  connectDB();
+  console.log(`Server đang chạy tại http://localhost:${PORT}`);
 });

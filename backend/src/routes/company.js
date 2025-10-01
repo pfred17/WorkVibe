@@ -1,30 +1,28 @@
 const express = require("express");
 const router = express.Router();
 
-const CompanyController = require("../controllers/companyController");
-const AuthMiddleware = require("../middlewares/authMiddileware");
+const {
+  getAllCompany,
+  getInfoCompany,
+  createCompany,
+  updateCompany,
+  deleteCompany,
+} = require("../controllers/companyController");
+const { protectRoute } = require("../middlewares/authMiddleware");
 
 // [GET] /api/company
-router.get("/", CompanyController.getAllCompany);
+router.get("/", getAllCompany);
 
 // [GET] /api/company/:id
-router.get("/:id", CompanyController.getInfo);
+router.get("/:id", getInfoCompany);
 
 // [POST] /api/company/create
-router.post("/create", AuthMiddleware.protectRoute, CompanyController.create);
+router.post("/create", protectRoute, createCompany);
 
 // [PUT] /api/company/update/:id
-router.put(
-  "/update/:id",
-  AuthMiddleware.protectRoute,
-  CompanyController.update
-);
+router.put("/update/:id", protectRoute, updateCompany);
 
 // [POST] /api/delete/:id
-router.delete(
-  "/delete/:id",
-  AuthMiddleware.protectRoute,
-  CompanyController.delete
-);
+router.delete("/delete/:id", protectRoute, deleteCompany);
 
 module.exports = router;
