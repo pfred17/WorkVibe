@@ -19,6 +19,7 @@ const {
   updateProfile,
   forgotPassword,
   resetPassword,
+  refreshToken,
 } = require("../controllers/authController");
 
 // [POST] /api/auth/register
@@ -46,5 +47,8 @@ router.post("/forgot-password", forgotPassword);
 
 // [POST] /api/auth/reset-password?token=abc
 router.post("/reset-password", resetPasswordValidator, validate, resetPassword);
+
+// [POST] /api/auth/refresh-token
+router.post("/refresh-token", refreshToken);
 
 module.exports = router;
