@@ -2,7 +2,10 @@ const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const generateToken = require("../utils/generateToken");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../utils/generateToken");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const { sendResetPasswordEmail } = require("../utils/mailer");
@@ -55,13 +58,15 @@ const login = async (req, res, next) => {
     if (!isPasswordCorrect)
       return next(new AppError("Invalid cretendials.", 400));
 
-    generateToken(user._id, res);
+    const token = await generateAccessToken(user._id);
+    await generateRefreshToken(user._id, res);
 
     res.status(200).json({
       _id: user._id,
       name: user.name,
       email: user.email,
       avatar: user.avatar,
+      accessToken: token,
     });
   } catch (error) {
     next(error);
@@ -156,7 +161,7 @@ const forgotPassword = async (req, res, next) => {
         message: "User not found",
       });
 
-    const tokenReset = generateToken(user._id);
+    const tokenReset = generateAccessToken(user._id);
 
     await sendResetPasswordEmail(email, tokenReset);
 
@@ -192,6 +197,28 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+const refreshToken = async (req, res, next) => {
+  const token = req.cookies?.refreshToken;
+  try {
+    if (!token) return next(new AppError("No refresh token provided", 401));
+    jwt.verify(token, process.env.JWT_REFRESHTOKEN, async (err, decoded) => {
+      if (err) {
+        return next(new AppError("Invalid or expired refresh token", 403));
+      }
+
+      const user = await User.findById(decoded.userId).select("-password");
+      if (!user) {
+        return next(new AppError("User not found", 404));
+      }
+      const newAccessToken = await generateAccessToken(user._id);
+
+      res.status(200).json({ accessToken: newAccessToken });
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
@@ -200,4 +227,5 @@ module.exports = {
   updateProfile,
   forgotPassword,
   resetPassword,
+  refreshToken,
 };
