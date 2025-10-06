@@ -2,8 +2,8 @@ const Job = require("../models/Job");
 const cloudinary = require("../config/cloudinary");
 
 const getAllJob = async (req, res) => {
+  const filters = {};
   try {
-    const filters = {};
     if (req.query.search) {
       filters.title = { $regex: req.query.search, $options: "i" };
     }

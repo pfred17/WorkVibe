@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
+const upload = require("../middlewares/uploadMiddleware");
+
 const {
   getAllCompany,
   getInfoCompany,
@@ -17,10 +19,10 @@ router.get("/", getAllCompany);
 router.get("/:id", getInfoCompany);
 
 // [POST] /api/company/create
-router.post("/create", protectRoute, createCompany);
+router.post("/create", protectRoute, upload.single("logo"), createCompany);
 
 // [PUT] /api/company/update/:id
-router.put("/update/:id", protectRoute, updateCompany);
+router.put("/update/:id", protectRoute, upload.single("logo"), updateCompany);
 
 // [POST] /api/delete/:id
 router.delete("/delete/:id", protectRoute, deleteCompany);

@@ -1,27 +1,23 @@
 const Company = require("../models/Company");
 const cloudinary = require("../config/cloudinary");
+const AppError = require("../utils/AppError");
+const fs = require("fs");
 
-const getAllCompany = async (req, res) => {
+const getAllCompany = async (req, res, next) => {
   try {
-    const companys = await Company.find({}, "-password");
+    const companys = await Company.find({});
     res.status(200).json({
       message: "Get all companys successfully.",
       data: companys,
     });
   } catch (error) {
-    console.log(
-      "Error in company controller function getAllCompany: ",
-      error.message
-    );
-    res.status(500).json({
-      message: "Server Internal Error.",
-    });
+    next(error);
   }
 };
 
-const getInfoCompany = async (req, res) => {
+const getInfoCompany = async (req, res, next) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
     const company = await Company.findById(id);
 
     if (!company) {
@@ -35,37 +31,35 @@ const getInfoCompany = async (req, res) => {
       });
     }
   } catch (error) {
-    console.log(
-      "Error in company controller function getInfo: ",
-      error.message
-    );
-    res.status(500).json({
-      message: "Server Internal Error.",
-    });
+    next(error);
   }
 };
 
-const createCompany = async (req, res) => {
-  try {
-    const { name, website, description, logo } = req.body;
-    const userId = req.user._id;
+const createCompany = async (req, res, next) => {
+  const { name, website, description } = req.body || {};
+  const userId = req.user._id;
+  const logoFile = req.file;
 
-    if (!name || !website || !description || !logo) {
-      return res.status(400).json({
-        error: "VALIDATION_ERROR",
-        message: "Please provide all required company information.",
-      });
+  try {
+    if (!name && !website && !description && !logoFile) {
+      return next(
+        new AppError("Please provide all required company information.", 400)
+      );
     }
 
     const existingCompany = await Company.findOne({ owner: userId });
     if (existingCompany) {
-      return res.status(400).json({
-        error: "COMPANY_EXISTS",
-        message: "You have already created a company.",
-      });
+      return next(new AppError("You have already created a company.", 400));
     }
 
-    const cloudinaryRes = await cloudinary.uploader.upload(logo);
+    const cloudinaryRes = await cloudinary.uploader.upload(logoFile.path, {
+      folder: "company_logo",
+    });
+
+    // Xóa file tạm thời sau khi upload xong
+    fs.unlink(logoFile.path, (err) => {
+      if (err) console.log("Error deleting temp file:", err);
+    });
 
     const newCompany = new Company({
       name,
@@ -78,41 +72,45 @@ const createCompany = async (req, res) => {
     if (newCompany) {
       await newCompany.save();
       res.status(201).json({
-        company: newCompany,
         message: "Create company successfully.",
+        company: newCompany,
       });
     }
-
-    // Kiểm tra xem user đã có công ty chưa
   } catch (error) {
-    console.log("Error in company controller function create: ", error.message);
-    res.status(500).json({
-      message: "Server Internal Error.",
+    fs.unlink(logoFile.path, (err) => {
+      if (err) console.log("Error deleting temp file on error:", err);
     });
+
+    next(error);
   }
 };
 
-const updateCompany = async (req, res) => {
+const updateCompany = async (req, res, next) => {
+  const { id } = req.params;
+  const { name, website, description } = req.body || {};
+  let logoFile = req.file;
   try {
-    const { id } = req.params;
-    const { logo, name, website, description } = req.body || {};
-
-    if (!logo && !name && !description && !website) {
+    if (!logoFile && !name && !description && !website) {
       return res.status(400).json({
         message: "No fields have been updated.",
       });
     }
 
-    let logoUrl;
-    if (logo) {
-      const cloudinaryRes = await cloudinary.uploader.upload(logo);
+    const company = await Company.findById(id);
+
+    if (!company) return next(new AppError("Company not exsits."));
+
+    let logoUrl = company.logo;
+
+    if (logoFile) {
+      const cloudinaryRes = await cloudinary.uploader.upload(logoUrl);
       logoUrl = cloudinaryRes.secure_url;
     }
 
     const updateFields = {
       ...req.body,
+      logo: logoUrl,
     };
-    if (logoUrl) updateFields.logo = logoUrl;
 
     const updatedCompany = await Company.findByIdAndUpdate(id, updateFields, {
       new: true,
@@ -129,32 +127,24 @@ const updateCompany = async (req, res) => {
       company: updatedCompany,
     });
   } catch (error) {
-    console.log("Error in company controller function update: ", error.message);
-    res.status(500).json({
-      message: "Server Internal Error.",
-    });
+    next(error);
   }
 };
 
-const deleteCompany = async (req, res) => {
+const deleteCompany = async (req, res, next) => {
   try {
     const { id } = req.params;
 
     const existingCompany = await Company.findByIdAndDelete(id);
     if (!existingCompany) {
-      return res.status(400).json({
-        message: "Delete company faild.",
-      });
+      return next(new AppError("Delete company faild.", 400));
     }
 
     res.status(200).json({
       message: "Delete company successfully.",
     });
   } catch (error) {
-    console.log("Error in company controller function delete: ", error.message);
-    res.status(500).json({
-      message: "Server Internal Error.",
-    });
+    next(error);
   }
 };
 
