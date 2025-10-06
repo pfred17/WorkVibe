@@ -1,14 +1,16 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+
+const cloudinary = require("../config/cloudinary");
+const { sendResetPasswordEmail } = require("../utils/mailer");
+const ERROR_CODE = require("../utils/errorCodes");
 
 const {
   generateAccessToken,
   generateRefreshToken,
 } = require("../utils/generateToken");
-const cloudinary = require("../config/cloudinary");
-const fs = require("fs");
-const { sendResetPasswordEmail } = require("../utils/mailer");
 const AppError = require("../utils/AppError");
 
 const register = async (req, res, next) => {
@@ -17,7 +19,8 @@ const register = async (req, res, next) => {
 
     const user = await User.findOne({ email });
 
-    if (user) return next(new AppError("Email already exists.", 400));
+    if (user)
+      return next(new AppError("Email already exists.", 400, "EMAIL_EXIST"));
 
     const salt = await bcrypt.genSalt(10);
     const hassedPassword = await bcrypt.hash(password, salt);
@@ -38,7 +41,7 @@ const register = async (req, res, next) => {
         message: "Register successfully.",
       });
     } else {
-      next(new AppError("Invalid user data.", 400));
+      next(new AppError("Invalid user data.", 400, "INVALID_DATA"));
     }
   } catch (error) {
     next(error);
@@ -51,12 +54,15 @@ const login = async (req, res, next) => {
   try {
     const user = await User.findOne({ email });
 
-    if (!user) return next(new AppError("User not found.", 404));
+    if (!user)
+      return next(new AppError("User not found.", 404, "USER_NOT_FOUND"));
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
     if (!isPasswordCorrect)
-      return next(new AppError("Invalid cretendials.", 400));
+      return next(
+        new AppError("Invalid cretendials.", 400, "PASSWORD_NOT_CORRECT")
+      );
 
     const token = await generateAccessToken(user._id);
     await generateRefreshToken(user._id, res);
@@ -75,7 +81,11 @@ const login = async (req, res, next) => {
 
 const logout = (req, res, next) => {
   try {
-    res.cookie("jwt", "", { maxAge: 0 });
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "strict",
+    });
     res.status(200).json({
       message: "Logged out successfully.",
     });
@@ -98,7 +108,13 @@ const updateProfile = async (req, res, next) => {
       !gender &&
       !address
     )
-      return next(new AppError("No fields have been updated.", 400));
+      return next(
+        new AppError(
+          "No fields have been updated.",
+          400,
+          "PROFILE_NO_UPDATE_FIELDS"
+        )
+      );
 
     let avatarUrl = req.user.avatar;
 
@@ -109,6 +125,8 @@ const updateProfile = async (req, res, next) => {
       avatarUrl = cloudinaryRes.secure_url;
 
       // Xóa file tạm thời sau khi upload xong
+      console.log(avatarFile.path);
+
       fs.unlink(avatarFile.path, (err) => {
         if (err) console.log("Error deleting temp file:", err);
       });
@@ -155,11 +173,7 @@ const forgotPassword = async (req, res, next) => {
   const { email } = req.body;
   try {
     const user = await User.findOne({ email });
-    console.log(user.undefinedMethod()); // sẽ throw TypeError
-    if (!user)
-      return res.status(404).json({
-        message: "User not found",
-      });
+    if (!user) return next(new AppError(ERROR_CODE.NOT_FOUND));
 
     const tokenReset = generateAccessToken(user._id);
 
@@ -208,7 +222,7 @@ const refreshToken = async (req, res, next) => {
 
       const user = await User.findById(decoded.userId).select("-password");
       if (!user) {
-        return next(new AppError("User not found", 404));
+        return next(new AppError(ERROR_CODE.NOT_FOUND));
       }
       const newAccessToken = await generateAccessToken(user._id);
 

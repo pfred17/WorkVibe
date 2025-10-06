@@ -6,6 +6,9 @@ const errorHandler = (err, req, res, next) => {
   // Nếu lỗi có statusCode (AppError) thì dùng, không thì mặc định 500
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
+  // dành cho client hiển thị cho người dùng
+  const errorCode =
+    err.errorCode || "An error occurred, please try again later.";
 
   if (err instanceof ValidationError) {
     return res.status(err.statusCode).json({
@@ -19,6 +22,7 @@ const errorHandler = (err, req, res, next) => {
 
   res.status(statusCode).json({
     success: false,
+    errorCode,
     message,
     // chỉ show stack trace khi đang ở development
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,

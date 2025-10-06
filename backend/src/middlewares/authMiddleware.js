@@ -1,11 +1,13 @@
 const jwt = require("jsonwebtoken");
+
 const UserSchema = require("../models/User");
 const AppError = require("../utils/AppError");
+const ERROR_CODE = require("../utils/errorCodes");
 
 const protectRoute = async (req, res, next) => {
   const authHeader = req.headers?.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
-    return next(new AppError("Unauthorized", 401));
+    return next(new AppError(ERROR_CODE.UNAUTHORIZED));
   }
 
   const token = authHeader.split(" ")[1];
@@ -17,7 +19,7 @@ const protectRoute = async (req, res, next) => {
       "-password"
     );
     if (!user) {
-      return next(new AppError("User not found", 404));
+      return next(new AppError(ERROR_CODE.NOT_FOUND));
     }
 
     req.user = user;
@@ -29,7 +31,7 @@ const protectRoute = async (req, res, next) => {
     if (error.name === "JsonWebTokenError") {
       return next(new AppError("Invalid token", 401));
     }
-    return next(error); // cho errorHandler xử lý
+    return next(error);
   }
 };
 
