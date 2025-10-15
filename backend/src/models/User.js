@@ -4,7 +4,7 @@ const UserSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    password: String,
     phone: String,
     description: String,
     address: String,
@@ -16,6 +16,7 @@ const UserSchema = new mongoose.Schema(
       enum: ["seeker", "employer", "admin"],
       default: "seeker",
     },
+    googleId: String,
     resumeUrl: String, // Link CV người tìm việc (nếu có)
     savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company" }, // nếu là employer

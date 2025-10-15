@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
+const passport = require("../config/passport");
+
 const { protectRoute } = require("../middlewares/authMiddleware");
 const upload = require("../middlewares/uploadMiddleware");
 
@@ -12,6 +14,7 @@ const {
 const { validate } = require("../middlewares/validate");
 
 const {
+  oauth2Login,
   login,
   register,
   logout,
@@ -21,6 +24,23 @@ const {
   resetPassword,
   refreshToken,
 } = require("../controllers/authController");
+
+/* Route to start OAuth2 authentication */
+// [GET] /api/auth/google
+router.get(
+  "/google",
+  passport.authenticate("google", {
+    scope: ["profile", "email"],
+  })
+);
+
+/* Callback route for OAuth2 authentication */
+// [GET] /api/auth/google/callback
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  oauth2Login
+);
 
 // [POST] /api/auth/register
 router.post("/register", registerValidator, validate, register);

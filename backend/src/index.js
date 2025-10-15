@@ -1,14 +1,15 @@
+require("dotenv").config();
 // Import các thư viện cần thiết
 const express = require("express");
-const dotenv = require("dotenv");
 const cors = require("cors");
-const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
+const session = require("express-session");
+
+const passport = require("./config/passport");
 const route = require("./routes/index");
 const connectDB = require("./config/db");
 const errorHandler = require("./middlewares/errorMiddleware");
 // Load biến môi trường từ file .env
-dotenv.config();
 
 // Khởi tạo ứng dụng Express
 const app = express();
@@ -18,6 +19,17 @@ app.use(cors());
 app.use(express.json()); // để parse body JSON
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    secret: "keyboard cat",
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: true },
+  })
+);
+/* OAuth Middleware */
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Cấu hình route
 route(app);

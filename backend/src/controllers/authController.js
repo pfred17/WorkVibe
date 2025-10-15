@@ -13,6 +13,24 @@ const {
 } = require("../utils/generateToken");
 const AppError = require("../utils/AppError");
 
+const oauth2Login = async (req, res, next) => {
+  const user = req.user;
+  try {
+    const token = await generateAccessToken(user._id);
+    await generateRefreshToken(user._id, res);
+
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      accessToken: token,
+    });
+  } catch (error) {
+    next(err);
+  }
+};
+
 const register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
@@ -32,7 +50,7 @@ const register = async (req, res, next) => {
     });
 
     if (newUser) {
-      generateToken(newUser._id, res);
+      generateRefreshToken(newUser._id, res);
       await newUser.save();
       res.status(201).json({
         _id: newUser._id,
@@ -234,6 +252,7 @@ const refreshToken = async (req, res, next) => {
 };
 
 module.exports = {
+  oauth2Login,
   register,
   login,
   logout,
