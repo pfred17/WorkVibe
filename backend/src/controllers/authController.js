@@ -7,6 +7,8 @@ const cloudinary = require("../config/cloudinary");
 const { sendResetPasswordEmail } = require("../utils/mailer");
 const ERROR_CODE = require("../utils/errorCodes");
 
+const { responseSuccess } = require("../utils/response");
+
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -19,13 +21,14 @@ const oauth2Login = async (req, res, next) => {
     const token = await generateAccessToken(user._id);
     await generateRefreshToken(user._id, res);
 
-    res.status(200).json({
+    const data = {
       _id: user._id,
       name: user.name,
       email: user.email,
       avatar: user.avatar,
       accessToken: token,
-    });
+    };
+    responseSuccess(res, "Login successfully", data, 200);
   } catch (error) {
     next(err);
   }
@@ -38,7 +41,9 @@ const register = async (req, res, next) => {
     const user = await User.findOne({ email });
 
     if (user)
-      return next(new AppError("Email already exists.", 400, "EMAIL_EXIST"));
+      return next(
+        new AppError("Email already exists.", 400, { code: "EMAIL_EXIST" })
+      );
 
     const salt = await bcrypt.genSalt(10);
     const hassedPassword = await bcrypt.hash(password, salt);
@@ -52,14 +57,14 @@ const register = async (req, res, next) => {
     if (newUser) {
       generateRefreshToken(newUser._id, res);
       await newUser.save();
-      res.status(201).json({
-        _id: newUser._id,
-        fullName: newUser.fullName,
-        email: newUser.email,
-        message: "Register successfully.",
-      });
+      responseSuccess(
+        res,
+        "Register successfully",
+        { email: newUser.email },
+        201
+      );
     } else {
-      next(new AppError("Invalid user data.", 400, "INVALID_DATA"));
+      next(AppError.template(ERROR_CODE.BAD_REQUEST));
     }
   } catch (error) {
     next(error);
@@ -72,26 +77,29 @@ const login = async (req, res, next) => {
   try {
     const user = await User.findOne({ email });
 
-    if (!user)
-      return next(new AppError("User not found.", 404, "USER_NOT_FOUND"));
+    if (!user) return next(AppError.template(ERROR_CODE.NOT_FOUND));
 
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
     if (!isPasswordCorrect)
       return next(
-        new AppError("Invalid cretendials.", 400, "PASSWORD_NOT_CORRECT")
+        new AppError("Invalid cretendials.", 400, {
+          code: "PASSWORD_NOT_CORRECT",
+        })
       );
 
     const token = await generateAccessToken(user._id);
     await generateRefreshToken(user._id, res);
 
-    res.status(200).json({
+    const data = {
       _id: user._id,
       name: user.name,
       email: user.email,
       avatar: user.avatar,
       accessToken: token,
-    });
+    };
+
+    responseSuccess(res, "Login successfully", data, 200);
   } catch (error) {
     next(error);
   }
@@ -127,11 +135,7 @@ const updateProfile = async (req, res, next) => {
       !address
     )
       return next(
-        new AppError(
-          "No fields have been updated.",
-          400,
-          "PROFILE_NO_UPDATE_FIELDS"
-        )
+        new AppError("No fields have been updated.", 400, { code: "NO_CHANGE" })
       );
 
     let avatarUrl = req.user.avatar;
@@ -165,7 +169,7 @@ const updateProfile = async (req, res, next) => {
       { new: true }
     ).select("-password");
 
-    return res.status(200).json(updatedUser);
+    responseSuccess(res, "Update profile successfully", updatedUser, 200);
   } catch (error) {
     console.log("Error in updateProfile:", error.message);
 
@@ -191,7 +195,7 @@ const forgotPassword = async (req, res, next) => {
   const { email } = req.body;
   try {
     const user = await User.findOne({ email });
-    if (!user) return next(new AppError(ERROR_CODE.NOT_FOUND));
+    if (!user) return next(AppError.template(ERROR_CODE.NOT_FOUND));
 
     const tokenReset = generateAccessToken(user._id);
 
@@ -213,10 +217,14 @@ const resetPassword = async (req, res, next) => {
     const decoded = await jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.userId);
-    if (!user) return next(new AppError("Email not found.", 404));
+    if (!user) return next(AppError.template(ERROR_CODE.NOT_FOUND));
 
     if (resetPassword?.length < 6)
-      return next(new AppError("Password must be at least 6 characters.", 400));
+      return next(
+        new AppError("Password must be at least 6 characters.", 400, {
+          code: "INVALID_DATA",
+        })
+      );
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(resetPassword, salt);
@@ -232,15 +240,15 @@ const resetPassword = async (req, res, next) => {
 const refreshToken = async (req, res, next) => {
   const token = req.cookies?.refreshToken;
   try {
-    if (!token) return next(new AppError("No refresh token provided", 401));
+    if (!token) return next(AppError.template(ERROR_CODE.UNAUTHORIZED));
     jwt.verify(token, process.env.JWT_REFRESHTOKEN, async (err, decoded) => {
       if (err) {
-        return next(new AppError("Invalid or expired refresh token", 403));
+        return next(AppError.template(ERROR_CODE.FORBIDDEN));
       }
 
       const user = await User.findById(decoded.userId).select("-password");
       if (!user) {
-        return next(new AppError(ERROR_CODE.NOT_FOUND));
+        return next(AppError.template(ERROR_CODE.NOT_FOUND));
       }
       const newAccessToken = await generateAccessToken(user._id);
 

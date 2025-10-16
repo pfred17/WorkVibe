@@ -1,16 +1,21 @@
 class AppError extends Error {
-  constructor(errorCodeOrMessage, statusCode, errorCode) {
-    if (typeof errorCodeOrMessage == "object") {
-      super(errorCodeOrMessage.message);
-      this.statusCode = errorCodeOrMessage.statusCode;
-      this.errorCode = errorCodeOrMessage.errorCode;
-    } else {
-      super(errorCodeOrMessage);
-      this.statusCode = statusCode;
-      this.errorCode = errorCode;
-    }
-    this.isOperational = true; // đánh dấu đây là lỗi có thể dự đoán
-    Error.captureStackTrace(this, this.constructor);
+  constructor(
+    message,
+    statusCode = 500,
+    error = { code: "INTERNAL_ERROR", detail: null }
+  ) {
+    super(message);
+    console.log(typeof message);
+    this.statusCode = statusCode;
+    this.code = error.code;
+    this.detail = error.detail;
+  }
+
+  static template(template, detail = null) {
+    return new AppError(template.message, template.statusCode, {
+      code: template.code,
+      detail,
+    });
   }
 }
 

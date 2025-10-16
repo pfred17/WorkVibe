@@ -2,14 +2,21 @@ const Company = require("../models/Company");
 const cloudinary = require("../config/cloudinary");
 const AppError = require("../utils/AppError");
 const fs = require("fs");
+const { responseSuccess } = require("../utils/response");
+const ERROR_CODE = require("../utils/errorCodes");
 
 const getAllCompany = async (req, res, next) => {
   try {
-    const companys = await Company.find({});
-    res.status(200).json({
-      message: "Get all companys successfully.",
-      data: companys,
-    });
+    const companies = await Company.find({});
+    if (companies.length > 0) {
+      return responseSuccess(
+        res,
+        "Get all companies successfully.",
+        companies,
+        200
+      );
+    }
+    next(AppError.template(ERROR_CODE.NOT_FOUND));
   } catch (error) {
     next(error);
   }
@@ -21,14 +28,9 @@ const getInfoCompany = async (req, res, next) => {
     const company = await Company.findById(id);
 
     if (!company) {
-      res.status(404).json({
-        error: "NOT_FOUND",
-        message: "Company not found.",
-      });
+      next(AppError.template(ERROR_CODE.NOT_FOUND));
     } else {
-      res.status(200).json({
-        company,
-      });
+      responseSuccess(res, "Get info company successfully.", company, 200);
     }
   } catch (error) {
     next(error);
@@ -43,13 +45,19 @@ const createCompany = async (req, res, next) => {
   try {
     if (!name && !website && !description && !logoFile) {
       return next(
-        new AppError("Please provide all required company information.", 400)
+        new AppError("Please provide all required company information.", 400, {
+          code: "INVALID_DATA",
+        })
       );
     }
 
     const existingCompany = await Company.findOne({ owner: userId });
     if (existingCompany) {
-      return next(new AppError("You have already created a company.", 400));
+      return next(
+        new AppError("You have already created a company.", 400, {
+          code: "BAD_REQUEST",
+        })
+      );
     }
 
     const cloudinaryRes = await cloudinary.uploader.upload(logoFile.path, {
@@ -69,13 +77,12 @@ const createCompany = async (req, res, next) => {
       owner: userId,
     });
 
-    if (newCompany) {
-      await newCompany.save();
-      res.status(201).json({
-        message: "Create company successfully.",
-        company: newCompany,
-      });
+    if (!newCompany) {
+      next(AppError.template(ERROR_CODE.BAD_REQUEST));
     }
+
+    await newCompany.save();
+    responseSuccess(res, "Create company successfully", newCompany, 201);
   } catch (error) {
     fs.unlink(logoFile.path, (err) => {
       if (err) console.log("Error deleting temp file on error:", err);
@@ -91,14 +98,16 @@ const updateCompany = async (req, res, next) => {
   let logoFile = req.file;
   try {
     if (!logoFile && !name && !description && !website) {
-      return res.status(400).json({
-        message: "No fields have been updated.",
-      });
+      next(
+        new AppError("No fields have been updated.", 400, {
+          code: "BAD_REQUEST",
+        })
+      );
     }
 
     const company = await Company.findById(id);
 
-    if (!company) return next(new AppError("Company not exsits."));
+    if (!company) return next(AppError.template(ERROR_CODE.NOT_FOUND));
 
     let logoUrl = company.logo;
 
@@ -117,15 +126,15 @@ const updateCompany = async (req, res, next) => {
     });
 
     if (!updatedCompany) {
-      return res.status(400).json({
-        message: "Update info company failed.",
-      });
+      next(AppError.template(ERROR_CODE.BAD_REQUEST));
     }
 
-    res.status(200).json({
-      message: "Update company information successfully.",
-      company: updatedCompany,
-    });
+    responseSuccess(
+      res,
+      "Company information updated successfully",
+      updatedCompany,
+      200
+    );
   } catch (error) {
     next(error);
   }
@@ -137,12 +146,10 @@ const deleteCompany = async (req, res, next) => {
 
     const existingCompany = await Company.findByIdAndDelete(id);
     if (!existingCompany) {
-      return next(new AppError("Delete company faild.", 400));
+      return next(AppError.template(ERROR_CODE.BAD_REQUEST));
     }
 
-    res.status(200).json({
-      message: "Delete company successfully.",
-    });
+    responseSuccess(res, "Delete company successfully", null, 200);
   } catch (error) {
     next(error);
   }
