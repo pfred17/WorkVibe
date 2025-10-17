@@ -1,5 +1,8 @@
 const Company = require("../models/company.model");
+const companyService = require("../services/company.service");
+
 const cloudinary = require("../config/cloudinary");
+
 const AppError = require("../utils/AppError");
 const fs = require("fs");
 const { responseSuccess } = require("../utils/response");
@@ -7,7 +10,7 @@ const ERROR_CODE = require("../utils/errorCodes");
 
 const getAllCompany = async (req, res, next) => {
   try {
-    const companies = await Company.find({});
+    const companies = await companyService.getAllCompany();
     if (companies.length > 0) {
       return responseSuccess(
         res,
@@ -25,7 +28,7 @@ const getAllCompany = async (req, res, next) => {
 const getInfoCompany = async (req, res, next) => {
   const { id } = req.params;
   try {
-    const company = await Company.findById(id);
+    const company = await companyService.findById(id);
 
     if (!company) {
       next(AppError.template(ERROR_CODE.NOT_FOUND));
@@ -51,7 +54,7 @@ const createCompany = async (req, res, next) => {
       );
     }
 
-    const existingCompany = await Company.findOne({ owner: userId });
+    const existingCompany = await companyService.findByOwnerId(userId);
     if (existingCompany) {
       return next(
         new AppError("You have already created a company.", 400, {
@@ -69,7 +72,7 @@ const createCompany = async (req, res, next) => {
       if (err) console.log("Error deleting temp file:", err);
     });
 
-    const newCompany = new Company({
+    const newCompany = await companyService.createCompany({
       name,
       website,
       description,
@@ -81,7 +84,6 @@ const createCompany = async (req, res, next) => {
       next(AppError.template(ERROR_CODE.BAD_REQUEST));
     }
 
-    await newCompany.save();
     responseSuccess(res, "Create company successfully", newCompany, 201);
   } catch (error) {
     fs.unlink(logoFile.path, (err) => {
@@ -93,7 +95,6 @@ const createCompany = async (req, res, next) => {
 };
 
 const updateCompany = async (req, res, next) => {
-  const { id } = req.params;
   const { name, website, description } = req.body || {};
   let logoFile = req.file;
   try {
@@ -105,7 +106,7 @@ const updateCompany = async (req, res, next) => {
       );
     }
 
-    const company = await Company.findById(id);
+    const company = await companyService.findByOwnerId(req.user._id);
 
     if (!company) return next(AppError.template(ERROR_CODE.NOT_FOUND));
 
@@ -121,9 +122,10 @@ const updateCompany = async (req, res, next) => {
       logo: logoUrl,
     };
 
-    const updatedCompany = await Company.findByIdAndUpdate(id, updateFields, {
-      new: true,
-    });
+    const updatedCompany = await companyService.updateById(
+      company._id,
+      updateFields
+    );
 
     if (!updatedCompany) {
       next(AppError.template(ERROR_CODE.BAD_REQUEST));
@@ -144,7 +146,7 @@ const deleteCompany = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const existingCompany = await Company.findByIdAndDelete(id);
+    const existingCompany = await companyService.deleteById(id);
     if (!existingCompany) {
       return next(AppError.template(ERROR_CODE.BAD_REQUEST));
     }

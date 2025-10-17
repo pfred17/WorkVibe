@@ -7,7 +7,7 @@ const ERROR_CODE = require("../utils/errorCodes");
 const protectRoute = async (req, res, next) => {
   const authHeader = req.headers?.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
-    return next(new AppError(ERROR_CODE.UNAUTHORIZED));
+    return next(AppError.template(ERROR_CODE.UNAUTHORIZED));
   }
 
   const token = authHeader.split(" ")[1];
@@ -35,4 +35,13 @@ const protectRoute = async (req, res, next) => {
   }
 };
 
-module.exports = { protectRoute };
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(AppError.template(ERROR_CODE.FORBIDDEN));
+    }
+    next();
+  };
+};
+
+module.exports = { protectRoute, authorize };

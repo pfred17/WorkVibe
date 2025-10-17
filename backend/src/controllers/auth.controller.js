@@ -1,14 +1,14 @@
-const User = require("../models/user.model");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const fs = require("fs");
 
+const userService = require("../services/auth.service");
+
 const cloudinary = require("../config/cloudinary");
+
 const { sendResetPasswordEmail } = require("../utils/mailer");
 const ERROR_CODE = require("../utils/errorCodes");
-
 const { responseSuccess } = require("../utils/response");
-
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -38,9 +38,9 @@ const register = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
 
-    const user = await User.findOne({ email });
+    const userExisted = await userService.findByEmail(email);
 
-    if (user)
+    if (userExisted)
       return next(
         new AppError("Email already exists.", 400, { code: "EMAIL_EXIST" })
       );
@@ -48,15 +48,15 @@ const register = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hassedPassword = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
+    const newUser = await userService.createUser({
       name,
       email,
       password: hassedPassword,
+      role,
     });
 
     if (newUser) {
       generateRefreshToken(newUser._id, res);
-      await newUser.save();
       responseSuccess(
         res,
         "Register successfully",
@@ -75,7 +75,7 @@ const login = async (req, res, next) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
+    const user = await userService.findByEmail(email);
 
     if (!user) return next(AppError.template(ERROR_CODE.NOT_FOUND));
 
@@ -163,11 +163,10 @@ const updateProfile = async (req, res, next) => {
       address: address || req.user.address,
     };
 
-    const updatedUser = await User.findByIdAndUpdate(
+    const updatedUser = await userService.updateById(
       req.user._id,
-      updateFields,
-      { new: true }
-    ).select("-password");
+      updateFields
+    );
 
     responseSuccess(res, "Update profile successfully", updatedUser, 200);
   } catch (error) {
@@ -194,7 +193,7 @@ const checkAuth = (req, res, next) => {
 const forgotPassword = async (req, res, next) => {
   const { email } = req.body;
   try {
-    const user = await User.findOne({ email });
+    const user = await userService.findByEmail(email);
     if (!user) return next(AppError.template(ERROR_CODE.NOT_FOUND));
 
     const tokenReset = generateAccessToken(user._id);
@@ -216,7 +215,7 @@ const resetPassword = async (req, res, next) => {
   try {
     const decoded = await jwt.verify(token, process.env.JWT_SECRET);
 
-    const user = await User.findById(decoded.userId);
+    const user = await userService.findById(decoded.userId);
     if (!user) return next(AppError.template(ERROR_CODE.NOT_FOUND));
 
     if (resetPassword?.length < 6)
@@ -246,7 +245,9 @@ const refreshToken = async (req, res, next) => {
         return next(AppError.template(ERROR_CODE.FORBIDDEN));
       }
 
-      const user = await User.findById(decoded.userId).select("-password");
+      const user = await userService
+        .findById(decoded.userId)
+        .select("-password");
       if (!user) {
         return next(AppError.template(ERROR_CODE.NOT_FOUND));
       }
