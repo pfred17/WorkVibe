@@ -7,8 +7,8 @@ const {
   createNewJob,
   updateJob,
   deleteJob,
-} = require("../controllers/jobController");
-const { protectRoute } = require("../middlewares/authMiddleware");
+} = require("../controllers/job.controller");
+const { protectRoute } = require("../middlewares/auth.middleware");
 
 // [GET] /api/job
 router.get("/", protectRoute, getAllJob);

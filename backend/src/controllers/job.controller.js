@@ -1,4 +1,4 @@
-const Job = require("../models/Job");
+const Job = require("../models/job.model");
 const cloudinary = require("../config/cloudinary");
 
 const getAllJob = async (req, res) => {

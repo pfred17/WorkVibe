@@ -8,7 +8,7 @@ const session = require("express-session");
 const passport = require("./config/passport");
 const route = require("./routes/index");
 const connectDB = require("./config/db");
-const errorHandler = require("./middlewares/errorMiddleware");
+const errorHandler = require("./middlewares/error.middleware");
 // Load biến môi trường từ file .env
 
 // Khởi tạo ứng dụng Express

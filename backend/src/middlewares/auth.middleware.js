@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-const UserSchema = require("../models/User");
+const UserSchema = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const ERROR_CODE = require("../utils/errorCodes");
 

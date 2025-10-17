@@ -3,15 +3,15 @@ const router = express.Router();
 
 const passport = require("../config/passport");
 
-const { protectRoute } = require("../middlewares/authMiddleware");
-const upload = require("../middlewares/uploadMiddleware");
+const { protectRoute } = require("../middlewares/auth.middleware");
+const upload = require("../middlewares/upload.middleware");
 
 const {
   registerValidator,
   loginValidator,
   resetPasswordValidator,
-} = require("../validators/authValidator");
-const { validate } = require("../middlewares/validate");
+} = require("../validators/auth.validator");
+const { validate } = require("../middlewares/validate.middleware");
 
 const {
   oauth2Login,
@@ -23,7 +23,7 @@ const {
   forgotPassword,
   resetPassword,
   refreshToken,
-} = require("../controllers/authController");
+} = require("../controllers/auth.controller");
 
 /* Route to start OAuth2 authentication */
 // [GET] /api/auth/google

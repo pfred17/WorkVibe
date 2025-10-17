@@ -1,7 +1,7 @@
-const authRoute = require("./auth");
-const companyRoute = require("./company");
-const jobRoute = require("./job");
-const applicationRoute = require("./application");
+const authRoute = require("./auth.route");
+const companyRoute = require("./company.route");
+const jobRoute = require("./job.route");
+const applicationRoute = require("./application.route");
 
 const route = (app) => {
   app.use("/api/auth", authRoute);

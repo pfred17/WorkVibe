@@ -8,8 +8,8 @@ const {
   getApplicationsForJob,
   updateApplicationStatus,
   deleteApplication,
-} = require("../controllers/applicationController");
-const { protectRoute } = require("../middlewares/authMiddleware");
+} = require("../controllers/application.controller");
+const { protectRoute } = require("../middlewares/auth.middleware");
 
 // [POST] /api/application/pend  (Nộp đơn ứng tuyển)
 router.post("/pend", protectRoute, create);

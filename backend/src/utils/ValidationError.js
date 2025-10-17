@@ -2,7 +2,7 @@ const AppError = require("./AppError");
 
 class ValidationError extends AppError {
   constructor(errors) {
-    super("Invalid data.", 400);
+    super(errors, 400);
     this.errors = errors; // mảng lỗi validate.js
   }
 }

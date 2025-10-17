@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const upload = require("../middlewares/uploadMiddleware");
+const upload = require("../middlewares/upload.middleware");
 
 const {
   getAllCompany,
@@ -9,8 +9,8 @@ const {
   createCompany,
   updateCompany,
   deleteCompany,
-} = require("../controllers/companyController");
-const { protectRoute } = require("../middlewares/authMiddleware");
+} = require("../controllers/company.controller");
+const { protectRoute } = require("../middlewares/auth.middleware");
 
 // [GET] /api/company
 router.get("/", getAllCompany);

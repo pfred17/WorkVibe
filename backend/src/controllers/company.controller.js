@@ -1,4 +1,4 @@
-const Company = require("../models/Company");
+const Company = require("../models/company.model");
 const cloudinary = require("../config/cloudinary");
 const AppError = require("../utils/AppError");
 const fs = require("fs");

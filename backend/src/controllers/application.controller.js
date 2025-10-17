@@ -1,4 +1,4 @@
-const Application = require("../models/Application");
+const Application = require("../models/application.model");
 
 // Nộp đơn ứng tuyển
 const create = async (req, res) => {
